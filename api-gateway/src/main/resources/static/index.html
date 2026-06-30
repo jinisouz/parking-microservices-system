@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Parking Pro Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --available: #28a745; --occupied: #dc3545; }
+        .parking-lot {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 15px;
+        }
+        .slot-card {
+            aspect-ratio: 1 / 1.2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 3px solid transparent;
+            background: white;
+        }
+        .slot-card:hover:not(.OCCUPIED) {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-color: var(--available);
+        }
+        .slot-card.AVAILABLE { color: var(--available); border-bottom: 8px solid var(--available); }
+        .slot-card.OCCUPIED { color: var(--occupied); border-bottom: 8px solid var(--occupied); cursor: not-allowed; opacity: 0.8; }
+        .slot-icon { font-size: 2rem; margin-bottom: 5px; }
+        .wallet-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    </style>
+</head>
+<body class="bg-light" onload="initApp()">
+
+    <div class="container py-4">
+        <header class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h1 class="display-6 fw-bold text-primary mb-0">🅿️ Smart Parking Dashboard</h1>
+                <p id="welcomeUser" class="text-muted mb-0">Connecting to services...</p>
+            </div>
+            <button onclick="logout()" class="btn btn-outline-danger btn-sm">Logout</button>
+        </header>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card wallet-card shadow-sm mb-4 border-0">
+                    <div class="card-body p-4">
+                        <h6>Active User Wallet</h6>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-transparent text-white border-light">ID</span>
+                            <input type="number" id="userId" class="form-control bg-transparent text-white border-light" readonly>
+                        </div>
+                        <h2 id="userBalance" class="mb-0">$ --</h2>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm p-4 border-0">
+                    <h5 class="mb-3">Quick Booking</h5>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Selected Slot ID</label>
+                        <input type="text" id="slotIdDisplay" class="form-control form-control-lg bg-light" placeholder="Select a slot" readonly>
+                    </div>
+                    <button id="bookBtn" onclick="makeBooking()" class="btn btn-primary btn-lg w-100 shadow-sm" disabled>
+                        Confirm & Pay ($20.0)
+                    </button>
+                    <div id="message" class="mt-3"></div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0">Parking Lot Map</h5>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadSlots()">🔄 Refresh Map</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="parkingGrid" class="parking-lot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function initApp() {
+            // 1. Get the ID we stored in login.html
+            const activeId = localStorage.getItem('activeUserId');
+            
+            if (!activeId) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            // 2. Display the ID in the wallet UI
+            document.getElementById('userId').value = activeId;
+            
+            // 3. Trigger data loading
+            await loadSlots();
+            await loadUserBalance();
+        }
+
+        function logout() {
+            localStorage.removeItem('activeUserId');
+            window.location.href = "login.html";
+        }
+
+        async function loadUserBalance() {
+            const uId = document.getElementById('userId').value;
+            try {
+                const response = await fetch(`/users/${uId}`);
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('userBalance').innerText = `$${user.balance.toFixed(2)}`;
+                    document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name}!`;
+                } else {
+                    document.getElementById('userBalance').innerText = "User Not Found";
+                }
+            } catch (err) { 
+                document.getElementById('userBalance').innerText = "Service Offline";
+            }
+        }
+
+        async function loadSlots() {
+            try {
+                const response = await fetch('/parking/slots');
+                const slots = await response.json();
+                const grid = document.getElementById('parkingGrid');
+                grid.innerHTML = '';
+
+                slots.forEach(slot => {
+                    const isAvailable = slot.status === 'AVAILABLE';
+                    grid.innerHTML += `
+                        <div class="slot-card ${slot.status}" onclick="${isAvailable ? `selectSlot(${slot.id})` : ''}">
+                            <div class="slot-icon">${isAvailable ? '🔓' : '🚗'}</div>
+                            <div class="fw-bold">Slot ${slot.id}</div>
+                            <div class="small">${slot.status}</div>
+                        </div>`;
+                });
+            } catch (err) {
+                console.error("Map fetch failed");
+            }
+        }
+
+        function selectSlot(id) {
+            document.getElementById('slotIdDisplay').value = id;
+            document.getElementById('bookBtn').disabled = false;
+        }
+
+        async function makeBooking() {
+            const uId = document.getElementById('userId').value;
+            const sId = document.getElementById('slotIdDisplay').value;
+            const btn = document.getElementById('bookBtn');
+            const msg = document.getElementById('message');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+
+            try {
+                const response = await fetch(`/bookings/doBooking?userId=${uId}&slotId=${sId}`, { method: 'POST' });
+                const result = await response.text();
+                
+                msg.innerHTML = `<div class="alert ${result.includes('Success') ? 'alert-success' : 'alert-danger'}">${result}</div>`;
+                
+                loadSlots();
+                loadUserBalance();
+                document.getElementById('slotIdDisplay').value = '';
+            } catch (error) {
+                msg.innerHTML = `<div class="alert alert-danger">Error: Communication failed</div>`;
+            } finally {
+                btn.innerHTML = 'Confirm & Pay ($20.0)';
+            }
+        }
+    </script>
+</body>
+</html>

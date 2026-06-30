@@ -1,0 +1,33 @@
+# ==========================================
+# 1. Java Compilation & Build Artifacts
+# ==========================================
+**/target/
+**/bin/
+*.jar
+*.war
+*.ear
+*.class
+
+# ==========================================
+# 2. Eclipse IDE Specific Files
+# ==========================================
+# Ignore local user settings and workspace configurations
+**/.settings/
+**/.metadata/
+**/RemoteSystemsTempFiles/
+**/.recommenders/
+*.userlibraries
+*.suo
+
+# Optional: Un-comment the next two lines if your team members use different IDEs (like IntelliJ or VS Code)
+# **/.project
+# **/.classpath
+
+# ==========================================
+# 3. Operating System Junk
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
