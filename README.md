@@ -4,15 +4,6 @@ A robust, full-stack microservices application built with **Java**, **Spring Boo
 
 ---
 
-## Project Team & Contributors
-
-* **Jinisha Dsouza** — [GitHub Profile](https://github.com/jinisouz)
-* **Taniya Machado** — [GitHub Profile](https://github.com/username2)
-* **Saniya Machado** — [GitHub Profile](https://github.com/username3)
-* **Flavia Dmello** — [GitHub Profile](https://github.com/username4)
-
----
-
 ## System Architecture
 The application consists of 5 decoupled microservices:
 1. **`discovery-server`** (Eureka Server) — Central service registry for network discovery.
